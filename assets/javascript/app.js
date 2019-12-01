@@ -4,6 +4,12 @@ firebase.initializeApp(config);
 // Create database reference
 var database = firebase.database();
 
+function validateFirstTimeInput(time) {
+    var str = time;
+    var patt = new RegExp("^(0[0-9]|1[0-9]|2[0-3]|[0-9]):[0-5][0-9]$");
+    var res = patt.test(str);
+    return res;
+}
 
 $("#add-train-btn").on("click", function (event) {
     event.preventDefault();
@@ -13,30 +19,31 @@ $("#add-train-btn").on("click", function (event) {
     var dest = $("#dest-input").val().trim();
     var firstStart = $("#first-time-input").val().trim();
     var freq = $("#freq-input").val().trim();
+    var res = validateFirstTimeInput(firstStart);
+   
+    if (!res) {
+        alert("First train time must be military time only");
+    } else {
+        // Creates local temp object for holding train data
+        var train = {
+            name: trainName,
+            dest: dest,
+            firstStartTime: firstStart,
+            freq: freq
+        };
 
-    // Creates local temp object for holding train data
-    var train = {
-        name: trainName,
-        dest: dest,
-        firstStartTime: firstStart,
-        freq: freq
-    };
+        // Uploads obj to the database
+        database.ref().push(train);
 
-    // Uploads obj to the database
-    database.ref().push(train);
+        alert("Train successfully added");
 
-    console.log(train.name);
-    console.log(train.dest);
-    console.log("first start time:  " + train.firstStartTime);
-    console.log("train freq: " + train.freq);
+        //Clears all of the text-boxes
+        $("#train-name-input").val("");
+        $("#dest-input").val("");
+        $("#first-time-input").val("");
+        $("#freq-input").val("");
 
-    alert("Train successfully added");
-
-    //Clears all of the text-boxes
-    $("#train-name-input").val("");
-    $("#dest-input").val("");
-    $("#first-time-input").val("");
-    $("#freq-input").val("");
+    }
 
 });
 
@@ -48,31 +55,19 @@ database.ref().on("child_added", function (snap) {
     var firstStart = snap.val().firstStartTime;
     var freq = snap.val().freq;
 
-    //console.log(trainName);
-    //console.log(dest);
-    //console.log("first start time: " +firstStart);
-    //console.log("frequency : " + freq);
 
     //calculate when the next train is 
     //calulate how many minutes from now that is
     var firstTimeConverted = moment(firstStart, "HH:mm").subtract(1, "years");
-    // console.log(firstTimeConverted);
-
-    // var currentTime = moment();
-    // console.log("CURRENT TIME: " + moment(currentTime).format("hh:mm A"));
 
     var diffTime = moment().diff(moment(firstTimeConverted), "minutes");
-    // console.log("DIFFERENCE IN TIME: " + diffTime);
 
     var tRemainder = diffTime % freq;
-    // console.log(tRemainder);
 
     var minutesUntilTrain = freq - tRemainder;
-    // console.log("MINUTES TILL TRAIN: " + minutesUntilTrain);
-    
+
     var nextTrain = moment().add(minutesUntilTrain, "minutes");
-    // console.log("ARRIVAL TIME: " + moment(nextTrain).format("hh:mm"));
- 
+
     var nextTrainPretty = moment(nextTrain).format("hh:mm A");
 
     // Add to table
